@@ -8,6 +8,7 @@ using UnityEngine;
 public class WebViewManager : MonoBehaviour
 {
     [SerializeField] private string startUrl = "https://example.com";
+    [SerializeField] private bool useNativeWindowsOverlay = true;
 
     /// <summary>
     /// The FirstPersonController to freeze while the webview is open.
@@ -28,6 +29,10 @@ public class WebViewManager : MonoBehaviour
         }
 
         webViewObject = new GameObject("WebViewObject").AddComponent<WebViewObject>();
+
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+        webViewObject.windowsUseNativeOverlay = useNativeWindowsOverlay;
+#endif
 
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
         var canvasGo = GameObject.Find("Canvas");

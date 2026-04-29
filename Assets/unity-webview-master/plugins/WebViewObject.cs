@@ -93,6 +93,7 @@ public class WebViewObject : MonoBehaviour
     bool hasFocus;
 #elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
     public GameObject canvas;
+    public bool windowsUseNativeOverlay;
     Image bg;
     IntPtr webView;
     Rect rect;
@@ -100,6 +101,7 @@ public class WebViewObject : MonoBehaviour
     byte[] textureDataBuffer;
     string inputString = "";
     bool hasFocus;
+    bool windowsNativeOverlayUnavailable;
 #elif UNITY_IPHONE
     IntPtr webView;
 #elif UNITY_ANDROID
@@ -547,6 +549,8 @@ public class WebViewObject : MonoBehaviour
     [DllImport("WebView")]
     private static extern void _CWebViewPlugin_SetVisibility(IntPtr instance, bool visibility);
     [DllImport("WebView")]
+    private static extern void _CWebViewPlugin_SetNativeOverlay(IntPtr instance, bool enabled, int x, int y, int width, int height);
+    [DllImport("WebView")]
     private static extern bool _CWebViewPlugin_SetURLPattern(IntPtr instance, string allowPattern, string denyPattern, string hookPattern);
     [DllImport("WebView")]
     private static extern void _CWebViewPlugin_LoadURL(IntPtr instance, string url);
@@ -788,6 +792,10 @@ public class WebViewObject : MonoBehaviour
 #endif
             );
         rect = new Rect(0, 0, Screen.width, Screen.height);
+        if (windowsUseNativeOverlay && webView != IntPtr.Zero)
+        {
+            TrySetNativeOverlay(true, 0, 0, Screen.width, Screen.height);
+        }
 #elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
         {
             var uri = new Uri(_CWebViewPlugin_GetAppPath());
@@ -1050,7 +1058,14 @@ public class WebViewObject : MonoBehaviour
         int height = (int)(Screen.height - (mb + mt));
         _CWebViewPlugin_SetRect(webView, width, height);
         rect = new Rect(left, bottom, width, height);
-        UpdateBGTransform();
+        if (windowsUseNativeOverlay)
+        {
+            TrySetNativeOverlay(GetVisibility(), (int)left, (int)top, width, height);
+        }
+        else
+        {
+            UpdateBGTransform();
+        }
 #elif UNITY_WEBPLAYER
         Application.ExternalCall("unityWebView.setMargins", name, (int)ml, (int)mt, (int)mr, (int)mb);
 #elif UNITY_WEBGL && !UNITY_EDITOR
@@ -1097,6 +1112,12 @@ public class WebViewObject : MonoBehaviour
 #elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
         if (webView == IntPtr.Zero)
             return;
+        if (windowsUseNativeOverlay)
+        {
+            int nativeX = (int)rect.x;
+            int nativeY = (int)(Screen.height - rect.y - rect.height);
+            TrySetNativeOverlay(v, nativeX, nativeY, (int)rect.width, (int)rect.height);
+        }
         _CWebViewPlugin_SetVisibility(webView, v);
 #elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
         if (webView == IntPtr.Zero)
@@ -1863,6 +1884,8 @@ public class WebViewObject : MonoBehaviour
         }
         if (webView == IntPtr.Zero || !visibility)
             return;
+        if (windowsUseNativeOverlay)
+            return;
         bool refreshBitmap = (Time.frameCount % bitmapRefreshCycle == 0);
         _CWebViewPlugin_Update(webView, refreshBitmap, devicePixelRatio);
         if (refreshBitmap) {
@@ -1916,7 +1939,7 @@ public class WebViewObject : MonoBehaviour
 
     void OnGUI()
     {
-        if (webView == IntPtr.Zero || !visibility)
+        if (webView == IntPtr.Zero || !visibility || windowsUseNativeOverlay)
             return;
         switch (Event.current.type) {
         case EventType.MouseDown:
@@ -2084,6 +2107,25 @@ public class WebViewObject : MonoBehaviour
     // On Windows, CapturePreview is heavy; default 10 = refresh every 10th frame for better FPS.
     public int bitmapRefreshCycle = 10;
     public int devicePixelRatio = 1;
+
+    bool TrySetNativeOverlay(bool enabled, int x, int y, int width, int height)
+    {
+        if (webView == IntPtr.Zero || windowsNativeOverlayUnavailable)
+            return false;
+
+        try
+        {
+            _CWebViewPlugin_SetNativeOverlay(webView, enabled, x, y, width, height);
+            return true;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            windowsNativeOverlayUnavailable = true;
+            windowsUseNativeOverlay = false;
+            Debug.LogWarning("WebViewObject: native Windows overlay is unavailable in the loaded WebView.dll. Rebuild the Windows plugin DLL to enable it; falling back to texture capture.");
+            return false;
+        }
+    }
 
     void OnGUI()
     {

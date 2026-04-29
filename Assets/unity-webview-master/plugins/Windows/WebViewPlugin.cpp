@@ -17,6 +17,8 @@
 #include <mutex>
 #include <memory>
 #include <atomic>
+#include <vector>
+#include <cwchar>
 #include <stdio.h>
 
 #include "WebView2.h"
@@ -72,6 +74,10 @@ struct WebViewInstance {
     int rectWidth = 0;
     int rectHeight = 0;
     bool visible = true;
+    bool nativeOverlayEnabled = false;
+    HWND overlayParent = nullptr;
+    int overlayX = 0;
+    int overlayY = 0;
 
     // Bitmap from CapturePreview (decoded to RGBA). Double-buffered: STA thread decodes into
     // bitmapPixelsBack then swaps with bitmapPixels so Render() reads consistent front buffer.
@@ -168,6 +174,7 @@ enum CustomMsg {
     WM_WEBVIEW_CLEAR_COOKIES,
     WM_WEBVIEW_SEND_MOUSE,
     WM_WEBVIEW_SEND_KEY,
+    WM_WEBVIEW_SET_NATIVE_OVERLAY,
 };
 
 struct MouseEventData {
@@ -182,6 +189,15 @@ struct KeyEventData {
     int keyState;
 };
 
+struct NativeOverlayData {
+    bool enabled;
+    HWND parent;
+    int x;
+    int y;
+    int width;
+    int height;
+};
+
 struct CreateParams {
     WebViewInstance* instance = nullptr;
     std::wstring userDataFolder;
@@ -193,6 +209,41 @@ struct CreateParams {
     HANDLE readyEvent = nullptr;
     HRESULT createResult = E_PENDING;
 };
+
+struct MainWindowSearch {
+    DWORD pid;
+    HWND hwnd;
+};
+
+static BOOL CALLBACK EnumMainWindowProc(HWND hwnd, LPARAM lParam) {
+    MainWindowSearch* search = (MainWindowSearch*)lParam;
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid != search->pid || !IsWindowVisible(hwnd) || GetWindow(hwnd, GW_OWNER) != nullptr)
+        return TRUE;
+
+    wchar_t className[128] = {};
+    GetClassNameW(hwnd, className, 128);
+    if (wcscmp(className, L"UnityWebView2Window") == 0)
+        return TRUE;
+
+    search->hwnd = hwnd;
+    return FALSE;
+}
+
+static HWND FindUnityHostWindow() {
+    HWND active = GetActiveWindow();
+    if (active) {
+        wchar_t className[128] = {};
+        GetClassNameW(active, className, 128);
+        if (wcscmp(className, L"UnityWebView2Window") != 0)
+            return active;
+    }
+
+    MainWindowSearch search = { GetCurrentProcessId(), nullptr };
+    EnumWindows(EnumMainWindowProc, (LPARAM)&search);
+    return search.hwnd;
+}
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     WebViewInstance* inst = (WebViewInstance*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -411,6 +462,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             inst->rectHeight = h;
             RECT r = { 0, 0, w, h };
             inst->controller->put_Bounds(r);
+            if (inst->nativeOverlayEnabled && inst->overlayParent) {
+                SetWindowPos(hwnd, HWND_TOP, inst->overlayX, inst->overlayY, w, h, SWP_SHOWWINDOW);
+            }
         }
         return 0;
     }
@@ -418,7 +472,64 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         if (inst && inst->controller) {
             inst->visible = (wParam != 0);
             inst->controller->put_IsVisible(inst->visible ? TRUE : FALSE);
+            if (inst->nativeOverlayEnabled) {
+                ShowWindow(hwnd, inst->visible ? SW_SHOWNORMAL : SW_HIDE);
+            }
         }
+        return 0;
+    }
+    case WM_WEBVIEW_SET_NATIVE_OVERLAY: {
+        NativeOverlayData* data = (NativeOverlayData*)lParam;
+        if (!inst || !data) return 0;
+
+        inst->nativeOverlayEnabled = data->enabled;
+        inst->overlayParent = data->parent;
+        inst->overlayX = data->x;
+        inst->overlayY = data->y;
+        inst->rectWidth = data->width;
+        inst->rectHeight = data->height;
+
+        if (data->enabled && data->parent) {
+            SetParent(hwnd, data->parent);
+
+            LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+            style &= ~WS_POPUP;
+            style |= WS_CHILD;
+            SetWindowLongPtrW(hwnd, GWL_STYLE, style);
+
+            LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
+
+            RECT r = { 0, 0, data->width, data->height };
+            if (inst->controller) {
+                inst->controller->put_Bounds(r);
+                inst->controller->put_IsVisible(inst->visible ? TRUE : FALSE);
+            }
+
+            SetWindowPos(hwnd, HWND_TOP, data->x, data->y, data->width, data->height,
+                SWP_FRAMECHANGED | (inst->visible ? SWP_SHOWWINDOW : 0));
+        } else {
+            if (inst->controller) {
+                inst->controller->put_IsVisible(FALSE);
+            }
+            SetParent(hwnd, nullptr);
+
+            LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+            style &= ~WS_CHILD;
+            style |= WS_POPUP;
+            SetWindowLongPtrW(hwnd, GWL_STYLE, style);
+
+            LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            exStyle |= WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
+
+            SetWindowPos(hwnd, nullptr, -32000, -32000, data->width, data->height,
+                SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
+            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        }
+
+        delete data;
         return 0;
     }
     case WM_WEBVIEW_GO_BACK:
@@ -724,6 +835,20 @@ __declspec(dllexport) void _CWebViewPlugin_SetRect(void* instance, int width, in
 
 __declspec(dllexport) void _CWebViewPlugin_SetVisibility(void* instance, bool visibility) {
     PostToInstance((WebViewInstance*)instance, WM_WEBVIEW_SET_VISIBILITY, visibility ? 1 : 0, 0);
+}
+
+__declspec(dllexport) void _CWebViewPlugin_SetNativeOverlay(void* instance, bool enabled, int x, int y, int width, int height) {
+    WebViewInstance* inst = (WebViewInstance*)instance;
+    if (!inst || inst->destroying) return;
+
+    NativeOverlayData* data = new NativeOverlayData();
+    data->enabled = enabled;
+    data->parent = enabled ? FindUnityHostWindow() : nullptr;
+    data->x = x;
+    data->y = y;
+    data->width = width > 0 ? width : inst->rectWidth;
+    data->height = height > 0 ? height : inst->rectHeight;
+    PostMessage(inst->hwnd, WM_WEBVIEW_SET_NATIVE_OVERLAY, 0, (LPARAM)data);
 }
 
 __declspec(dllexport) bool _CWebViewPlugin_SetURLPattern(void* instance, const char* allowPattern, const char* denyPattern, const char* hookPattern) {
