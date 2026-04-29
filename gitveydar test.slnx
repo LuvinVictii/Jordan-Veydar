@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Assembly-CSharp-Editor-firstpass.csproj" />
+  <Project Path="unity-webview-nofragment.csproj" />
+  <Project Path="Bezi.Editor.csproj" />
+  <Project Path="unity-webview.csproj" />
+  <Project Path="Assembly-CSharp-firstpass.csproj" />
+</Solution>
