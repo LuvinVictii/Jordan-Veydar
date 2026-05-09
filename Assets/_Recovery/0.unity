@@ -602,7 +602,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e728d8a15e1a6c348995be717e4cf711, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
-  startUrl: https://apps.microsoft.com/home?hl=en-GB&gl=GB
+  startUrl: https://veydarbalancebuddies.lovable.app
   useNativeWindowsOverlay: 1
   playerController: {fileID: 497158544}
 --- !u!4 &472687669

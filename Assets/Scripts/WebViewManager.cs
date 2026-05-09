@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class WebViewManager : MonoBehaviour
 {
-    [SerializeField] private string startUrl = "https://example.com";
+    [SerializeField] private string startUrl = "https://veydarbalancebuddies.lovable.app";
     [SerializeField] private bool useNativeWindowsOverlay = true;
 
     /// <summary>
