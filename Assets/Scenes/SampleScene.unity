@@ -165,6 +165,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
   startUrl: https://chatgpt.com/
   useNativeWindowsOverlay: 1
+  useEdgeCovers: 1
+  coverLeftPercent: 10
+  coverTopPercent: 10
+  coverRightPercent: 10
+  coverBottomPercent: 10
+  edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
   playerController: {fileID: 497158544}
 --- !u!1 &144585207
 GameObject:
@@ -259,7 +265,7 @@ GameObject:
   - component: {fileID: 204660184}
   - component: {fileID: 204660183}
   m_Layer: 0
-  m_Name: Cube (2)
+  m_Name: Claude
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -780,6 +786,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
   startUrl: https://veydarbalancebuddies.lovable.app
   useNativeWindowsOverlay: 1
+  useEdgeCovers: 0
+  coverLeftPercent: 0
+  coverTopPercent: 0
+  coverRightPercent: 0
+  coverBottomPercent: 0
+  edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
   playerController: {fileID: 497158544}
 --- !u!4 &472687669
 Transform:
@@ -1037,6 +1049,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
   startUrl: https://veydar1.lovable.app
   useNativeWindowsOverlay: 1
+  useEdgeCovers: 0
+  coverLeftPercent: 0
+  coverTopPercent: 0
+  coverRightPercent: 0
+  coverBottomPercent: 0
+  edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
   playerController: {fileID: 497158544}
 --- !u!1 &556094622
 GameObject:
@@ -1052,7 +1070,7 @@ GameObject:
   - component: {fileID: 556094624}
   - component: {fileID: 556094623}
   m_Layer: 0
-  m_Name: Cube (3)
+  m_Name: Chatgpt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1343,7 +1361,7 @@ GameObject:
   - component: {fileID: 1106791708}
   - component: {fileID: 1106791712}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Balance Buddies
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1606,6 +1624,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
   startUrl: https://fishy-math-fun.lovable.app
   useNativeWindowsOverlay: 1
+  useEdgeCovers: 0
+  coverLeftPercent: 0
+  coverTopPercent: 0
+  coverRightPercent: 0
+  coverBottomPercent: 0
+  edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
   playerController: {fileID: 497158544}
 --- !u!1 &2008694883
 GameObject:
@@ -1621,7 +1645,7 @@ GameObject:
   - component: {fileID: 2008694885}
   - component: {fileID: 2008694884}
   m_Layer: 0
-  m_Name: Cube (1)
+  m_Name: Lovable
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1750,7 +1774,7 @@ GameObject:
   - component: {fileID: 2085525804}
   - component: {fileID: 2085525803}
   m_Layer: 0
-  m_Name: Cube (4)
+  m_Name: Fish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1911,6 +1935,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WebViewManager
   startUrl: https://claude.ai/new
   useNativeWindowsOverlay: 1
+  useEdgeCovers: 0
+  coverLeftPercent: 0
+  coverTopPercent: 0
+  coverRightPercent: 0
+  coverBottomPercent: 0
+  edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
   playerController: {fileID: 497158544}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
