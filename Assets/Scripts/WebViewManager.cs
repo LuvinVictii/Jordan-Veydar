@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Globalization;
 using UnityEngine;
 
 /// <summary>
@@ -9,6 +10,18 @@ public class WebViewManager : MonoBehaviour
 {
     [SerializeField] private string startUrl = "https://veydarbalancebuddies.lovable.app";
     [SerializeField] private bool useNativeWindowsOverlay = true;
+
+    [Header("Web Crop & Fit (%)")]
+    [SerializeField] private bool useEdgeCovers;
+    [Range(0f, 100f)]
+    [SerializeField] private float coverLeftPercent;
+    [Range(0f, 100f)]
+    [SerializeField] private float coverTopPercent;
+    [Range(0f, 100f)]
+    [SerializeField] private float coverRightPercent;
+    [Range(0f, 100f)]
+    [SerializeField] private float coverBottomPercent;
+    [SerializeField] private Color edgeCoverColor = Color.black;
 
     /// <summary>
     /// The FirstPersonController to freeze while the webview is open.
@@ -54,6 +67,7 @@ public class WebViewManager : MonoBehaviour
             ld: (msg) =>
             {
                 Debug.Log($"[WebViewManager] Page Loaded: {msg}");
+                ApplyWebEdgeCovers();
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_IOS
                 webViewObject.EvaluateJS(@"
                     if (!(window.webkit && window.webkit.messageHandlers)) {
@@ -99,6 +113,11 @@ public class WebViewManager : MonoBehaviour
     /// <summary>Shows or hides the webview and freezes/unfreezes the player accordingly.</summary>
     public void SetWebViewVisible(bool visible)
     {
+        if (visible)
+        {
+            ApplyWebEdgeCovers();
+        }
+
         webViewObject?.SetVisibility(visible);
         IsVisible = visible;
         playerController?.SetEnabled(!visible);
@@ -125,6 +144,152 @@ public class WebViewManager : MonoBehaviour
     }
 
     // ─── Navigation GUI ───────────────────────────────────────────────────────
+
+    private void ApplyWebEdgeCovers()
+    {
+        if (webViewObject == null)
+        {
+            return;
+        }
+
+        string background = FormatCssColor(edgeCoverColor);
+        string enabled = useEdgeCovers ? "true" : "false";
+        string left = FormatPercent(useEdgeCovers ? coverLeftPercent : 0f);
+        string top = FormatPercent(useEdgeCovers ? coverTopPercent : 0f);
+        string right = FormatPercent(useEdgeCovers ? coverRightPercent : 0f);
+        string bottom = FormatPercent(useEdgeCovers ? coverBottomPercent : 0f);
+
+        webViewObject.EvaluateJS($@"
+(function() {{
+    const rootId = 'unity-webview-edge-covers';
+    const enabled = {enabled};
+    const crop = {{
+        left: {left},
+        top: {top},
+        right: {right},
+        bottom: {bottom}
+    }};
+    const background = '{background}';
+    const body = document.body;
+
+    if (!body) {{
+        return;
+    }}
+
+    let root = document.getElementById(rootId);
+    if (!root) {{
+        root = document.createElement('div');
+        root.id = rootId;
+        document.documentElement.appendChild(root);
+    }}
+
+    root.innerHTML = '';
+    root.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;';
+
+    if (!enabled) {{
+        body.style.transform = '';
+        body.style.transformOrigin = '';
+        body.style.width = '';
+        body.style.minWidth = '';
+        body.style.minHeight = '';
+        return;
+    }}
+
+    const sourceWidth = Math.max(0.01, 100 - crop.left - crop.right);
+    const sourceHeight = Math.max(0.01, 100 - crop.top - crop.bottom);
+    const scale = Math.min(100 / sourceWidth, 100 / sourceHeight);
+    const fittedWidth = sourceWidth * scale;
+    const fittedHeight = sourceHeight * scale;
+
+    function getOffset(startCrop, endCrop, fittedSize) {{
+        if (startCrop > 0 && endCrop <= 0) {{
+            return 0;
+        }}
+        if (endCrop > 0 && startCrop <= 0) {{
+            return 100 - fittedSize;
+        }}
+        return (100 - fittedSize) / 2;
+    }}
+
+    const fittedLeft = getOffset(crop.left, crop.right, fittedWidth);
+    const fittedTop = getOffset(crop.top, crop.bottom, fittedHeight);
+    const fittedRight = Math.max(0, 100 - fittedLeft - fittedWidth);
+    const fittedBottom = Math.max(0, 100 - fittedTop - fittedHeight);
+
+    body.style.transformOrigin = '0 0';
+    body.style.width = '100vw';
+    body.style.minWidth = '100vw';
+    body.style.minHeight = '100vh';
+    body.style.transform =
+        'translate(' + fittedLeft + 'vw,' + fittedTop + 'vh) ' +
+        'scale(' + scale + ') ' +
+        'translate(' + (-crop.left) + 'vw,' + (-crop.top) + 'vh)';
+
+    const covers = [
+        {{ side: 'left', size: fittedLeft }},
+        {{ side: 'top', size: fittedTop }},
+        {{ side: 'right', size: fittedRight }},
+        {{ side: 'bottom', size: fittedBottom }}
+    ];
+
+    for (const cover of covers) {{
+        if (cover.size <= 0) {{
+            continue;
+        }}
+
+        const el = document.createElement('div');
+        el.setAttribute('data-unity-edge-cover', cover.side);
+        el.style.position = 'fixed';
+        el.style.background = background;
+        el.style.pointerEvents = 'auto';
+        el.style.zIndex = '2147483647';
+        ['click', 'dblclick', 'mousedown', 'mouseup', 'mousemove', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'wheel'].forEach(function(eventName) {{
+            el.addEventListener(eventName, function(event) {{
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }}, {{ capture: true, passive: false }});
+        }});
+
+        if (cover.side === 'left') {{
+            el.style.left = '0';
+            el.style.top = '0';
+            el.style.width = cover.size + '%';
+            el.style.height = '100%';
+        }} else if (cover.side === 'right') {{
+            el.style.right = '0';
+            el.style.top = '0';
+            el.style.width = cover.size + '%';
+            el.style.height = '100%';
+        }} else if (cover.side === 'top') {{
+            el.style.left = '0';
+            el.style.top = '0';
+            el.style.width = '100%';
+            el.style.height = cover.size + '%';
+        }} else if (cover.side === 'bottom') {{
+            el.style.left = '0';
+            el.style.bottom = '0';
+            el.style.width = '100%';
+            el.style.height = cover.size + '%';
+        }}
+
+        root.appendChild(el);
+    }}
+}})();");
+    }
+
+    private static string FormatPercent(float percent)
+    {
+        return Mathf.Clamp(percent, 0f, 100f).ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatCssColor(Color color)
+    {
+        int r = Mathf.RoundToInt(Mathf.Clamp01(color.r) * 255f);
+        int g = Mathf.RoundToInt(Mathf.Clamp01(color.g) * 255f);
+        int b = Mathf.RoundToInt(Mathf.Clamp01(color.b) * 255f);
+        string a = Mathf.Clamp01(color.a).ToString("0.###", CultureInfo.InvariantCulture);
+        return $"rgba({r},{g},{b},{a})";
+    }
 
     private void OnGUI()
     {
