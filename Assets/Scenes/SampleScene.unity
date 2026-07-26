@@ -171,6 +171,14 @@ MonoBehaviour:
   coverRightPercent: 10
   coverBottomPercent: 10
   edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
+  showRuntimeCropControls: 1
+  persistRuntimeCropConfig: 1
+  cropConfigWindowRect:
+    serializedVersion: 2
+    x: 10
+    y: 100
+    width: 360
+    height: 330
   playerController: {fileID: 497158544}
 --- !u!1 &144585207
 GameObject:
@@ -270,7 +278,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &204660183
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -792,6 +800,14 @@ MonoBehaviour:
   coverRightPercent: 0
   coverBottomPercent: 0
   edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
+  showRuntimeCropControls: 1
+  persistRuntimeCropConfig: 1
+  cropConfigWindowRect:
+    serializedVersion: 2
+    x: 10
+    y: 100
+    width: 360
+    height: 330
   playerController: {fileID: 497158544}
 --- !u!4 &472687669
 Transform:
@@ -1055,6 +1071,14 @@ MonoBehaviour:
   coverRightPercent: 0
   coverBottomPercent: 0
   edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
+  showRuntimeCropControls: 1
+  persistRuntimeCropConfig: 1
+  cropConfigWindowRect:
+    serializedVersion: 2
+    x: 10
+    y: 100
+    width: 360
+    height: 330
   playerController: {fileID: 497158544}
 --- !u!1 &556094622
 GameObject:
@@ -1366,7 +1390,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1106791708
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1630,6 +1654,14 @@ MonoBehaviour:
   coverRightPercent: 0
   coverBottomPercent: 0
   edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
+  showRuntimeCropControls: 1
+  persistRuntimeCropConfig: 1
+  cropConfigWindowRect:
+    serializedVersion: 2
+    x: 10
+    y: 100
+    width: 360
+    height: 330
   playerController: {fileID: 497158544}
 --- !u!1 &2008694883
 GameObject:
@@ -1650,7 +1682,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2008694884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1779,7 +1811,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2085525803
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1941,6 +1973,14 @@ MonoBehaviour:
   coverRightPercent: 0
   coverBottomPercent: 0
   edgeCoverColor: {r: 0, g: 0, b: 0, a: 1}
+  showRuntimeCropControls: 1
+  persistRuntimeCropConfig: 1
+  cropConfigWindowRect:
+    serializedVersion: 2
+    x: 10
+    y: 100
+    width: 360
+    height: 330
   playerController: {fileID: 497158544}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

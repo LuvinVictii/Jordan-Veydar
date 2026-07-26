@@ -23,6 +23,11 @@ public class WebViewManager : MonoBehaviour
     [SerializeField] private float coverBottomPercent;
     [SerializeField] private Color edgeCoverColor = Color.black;
 
+    [Header("Runtime Crop Controls")]
+    [SerializeField] private bool showRuntimeCropControls = true;
+    [SerializeField] private bool persistRuntimeCropConfig = true;
+    [SerializeField] private Rect cropConfigWindowRect = new Rect(10, 100, 360, 330);
+
     /// <summary>
     /// The FirstPersonController to freeze while the webview is open.
     /// Assign in the Inspector. Missing reference is non-fatal — a warning is logged.
@@ -30,12 +35,25 @@ public class WebViewManager : MonoBehaviour
     [SerializeField] private FirstPersonController playerController;
 
     private WebViewObject webViewObject;
+    private bool isCropConfigOpen;
+    private bool originalUseEdgeCovers;
+    private float originalCoverLeftPercent;
+    private float originalCoverTopPercent;
+    private float originalCoverRightPercent;
+    private float originalCoverBottomPercent;
+    private bool draftUseEdgeCovers;
+    private float draftCoverLeftPercent;
+    private float draftCoverTopPercent;
+    private float draftCoverRightPercent;
+    private float draftCoverBottomPercent;
 
     /// <summary>Whether the webview overlay is currently visible.</summary>
     public bool IsVisible { get; private set; }
 
     private IEnumerator Start()
     {
+        LoadRuntimeCropConfig();
+
         if (playerController == null)
         {
             Debug.LogWarning("[WebViewManager] playerController is not assigned — movement freeze will not work.");
@@ -291,6 +309,135 @@ public class WebViewManager : MonoBehaviour
         return $"rgba({r},{g},{b},{a})";
     }
 
+    private void OpenCropConfigWindow()
+    {
+        originalUseEdgeCovers = useEdgeCovers;
+        originalCoverLeftPercent = coverLeftPercent;
+        originalCoverTopPercent = coverTopPercent;
+        originalCoverRightPercent = coverRightPercent;
+        originalCoverBottomPercent = coverBottomPercent;
+
+        draftUseEdgeCovers = useEdgeCovers;
+        draftCoverLeftPercent = coverLeftPercent;
+        draftCoverTopPercent = coverTopPercent;
+        draftCoverRightPercent = coverRightPercent;
+        draftCoverBottomPercent = coverBottomPercent;
+        isCropConfigOpen = true;
+    }
+
+    private void ApplyDraftCropConfig()
+    {
+        useEdgeCovers = draftUseEdgeCovers;
+        coverLeftPercent = draftCoverLeftPercent;
+        coverTopPercent = draftCoverTopPercent;
+        coverRightPercent = draftCoverRightPercent;
+        coverBottomPercent = draftCoverBottomPercent;
+        ApplyWebEdgeCovers();
+    }
+
+    private void SaveCropConfig()
+    {
+        ApplyDraftCropConfig();
+
+        if (persistRuntimeCropConfig)
+        {
+            string prefix = nameof(WebViewManager) + ".";
+            PlayerPrefs.SetInt(prefix + "UseEdgeCovers", useEdgeCovers ? 1 : 0);
+            PlayerPrefs.SetFloat(prefix + "CoverLeftPercent", coverLeftPercent);
+            PlayerPrefs.SetFloat(prefix + "CoverTopPercent", coverTopPercent);
+            PlayerPrefs.SetFloat(prefix + "CoverRightPercent", coverRightPercent);
+            PlayerPrefs.SetFloat(prefix + "CoverBottomPercent", coverBottomPercent);
+            PlayerPrefs.Save();
+        }
+
+        isCropConfigOpen = false;
+    }
+
+    private void CancelCropConfig()
+    {
+        useEdgeCovers = originalUseEdgeCovers;
+        coverLeftPercent = originalCoverLeftPercent;
+        coverTopPercent = originalCoverTopPercent;
+        coverRightPercent = originalCoverRightPercent;
+        coverBottomPercent = originalCoverBottomPercent;
+        ApplyWebEdgeCovers();
+        isCropConfigOpen = false;
+    }
+
+    private void LoadRuntimeCropConfig()
+    {
+        if (!persistRuntimeCropConfig)
+        {
+            return;
+        }
+
+        string prefix = nameof(WebViewManager) + ".";
+        if (!PlayerPrefs.HasKey(prefix + "UseEdgeCovers"))
+        {
+            return;
+        }
+
+        useEdgeCovers = PlayerPrefs.GetInt(prefix + "UseEdgeCovers", useEdgeCovers ? 1 : 0) == 1;
+        coverLeftPercent = PlayerPrefs.GetFloat(prefix + "CoverLeftPercent", coverLeftPercent);
+        coverTopPercent = PlayerPrefs.GetFloat(prefix + "CoverTopPercent", coverTopPercent);
+        coverRightPercent = PlayerPrefs.GetFloat(prefix + "CoverRightPercent", coverRightPercent);
+        coverBottomPercent = PlayerPrefs.GetFloat(prefix + "CoverBottomPercent", coverBottomPercent);
+    }
+
+    private void DrawCropConfigWindow(int windowId)
+    {
+        GUILayout.Space(4);
+
+        bool changed = false;
+        bool nextEnabled = GUILayout.Toggle(draftUseEdgeCovers, "Aktifkan crop");
+        if (nextEnabled != draftUseEdgeCovers)
+        {
+            draftUseEdgeCovers = nextEnabled;
+            changed = true;
+        }
+
+        changed |= DrawPercentSlider("Kiri", ref draftCoverLeftPercent);
+        changed |= DrawPercentSlider("Atas", ref draftCoverTopPercent);
+        changed |= DrawPercentSlider("Kanan", ref draftCoverRightPercent);
+        changed |= DrawPercentSlider("Bawah", ref draftCoverBottomPercent);
+
+        if (changed)
+        {
+            ApplyDraftCropConfig();
+        }
+
+        GUILayout.FlexibleSpace();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Save", GUILayout.Height(40)))
+        {
+            SaveCropConfig();
+        }
+
+        if (GUILayout.Button("Cancel", GUILayout.Height(40)))
+        {
+            CancelCropConfig();
+        }
+        GUILayout.EndHorizontal();
+
+        GUI.DragWindow(new Rect(0, 0, cropConfigWindowRect.width, 28));
+    }
+
+    private static bool DrawPercentSlider(string label, ref float value)
+    {
+        GUILayout.Space(6);
+        GUILayout.Label($"{label}: {value:0.#}%");
+        float nextValue = GUILayout.HorizontalSlider(value, 0f, 100f);
+        nextValue = Mathf.Clamp(nextValue, 0f, 100f);
+
+        if (Mathf.Approximately(nextValue, value))
+        {
+            return false;
+        }
+
+        value = nextValue;
+        return true;
+    }
+
     private void OnGUI()
     {
         if (!IsVisible)
@@ -321,6 +468,24 @@ public class WebViewManager : MonoBehaviour
         if (GUI.Button(new Rect(x, ButtonY, ButtonSize, ButtonSize), "r"))
         {
             Reload();
+        }
+
+        x += ButtonSize + 10;
+        if (showRuntimeCropControls && GUI.Button(new Rect(x, ButtonY, ButtonSize, ButtonSize), "crop"))
+        {
+            if (isCropConfigOpen)
+            {
+                CancelCropConfig();
+            }
+            else
+            {
+                OpenCropConfigWindow();
+            }
+        }
+
+        if (isCropConfigOpen)
+        {
+            cropConfigWindowRect = GUI.Window(847201, cropConfigWindowRect, DrawCropConfigWindow, "Crop / Zoom");
         }
     }
 }
